@@ -6,6 +6,6 @@ TEST_CASE("construction")
 {
     SECTION("empty")
     {
-        auto v = ptl::Expected<int32_t, std::exception_ptr>();
+        auto v = ptl::expected<int32_t, std::exception_ptr>();
     }
 }

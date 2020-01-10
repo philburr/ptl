@@ -1,5 +1,6 @@
 #include "catch2/catch.hpp"
 #include "ptl/type_safe/integer.hpp"
+#include "ptl/type_safe/assert.hpp"
 
 TEST_CASE("Integer", "Construction")
 {

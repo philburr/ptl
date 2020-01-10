@@ -1,5 +1,6 @@
 #pragma once
 #include "ptl/compiler.hpp"
+#include "ptl/type_safe/detail/integer_checking.hpp"
 #include <type_traits>
 
 namespace ptl {

@@ -135,7 +135,8 @@ struct PackedPtr<std::exception_ptr, VT>
     }
     void set(std::exception_ptr ptr) noexcept
     {
-        data_ = (reinterpret_cast<uintptr_t>(ptr) & ptr_mask) | (data_ & ~ptr_mask);
+        uintptr_t ptr_data = *(uintptr_t*)&ptr;
+        data_ = (ptr_data & ptr_mask) | (data_ & ~ptr_mask);
     }
 
 private:
@@ -279,6 +280,20 @@ struct AtomicPackedPtr
         do {
             desired = (reinterpret_cast<uintptr_t>(ptr) & (-1ULL >> 16)) | (expected & (-1ULL << 48));
         } while (!data_.compare_exchange_weak(expected, desired, std::memory_order_release));
+    }
+
+    std::pair<T*, VT> get_add(signed VT delta) const noexcept
+    {
+        uintptr_t expected, desired;
+        VT old;
+
+        expected = data_.load();
+        do {
+            old = expected >> 48;
+            VT new_value = old + delta;
+            desired = (expected & (-1ULL >> 16)) | (new_value << 48);
+        } while (!data_.compare_exchange_weak(expected, desired, std::memory_order_release));
+        return { reinterpret_cast<T *>(expected & (-1ULL >> 16)), old };
     }
 
 private:

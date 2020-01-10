@@ -9,19 +9,35 @@
 #endif
 
 #ifndef PTL_OPTIMIZE
-#ifdef __GNUC_
-#define PTL_OPTIMIZE [[gnu::optimize(3)]]
+#if defined(__clang__)
+#define PTL_OPTIMIZE
+#elif defined(__GNUC__)
+#define PTL_OPTIMIZE __attribute__((optimize("3")))
 #else
 #define PTL_OPTIMIZE
 #endif
 #endif
 
 #ifndef PTL_NOOPTIMIZE
-#ifdef __GNUC_
-#define PTL_NOOPTIMIZE [[gnu::optimize(0)]]
+#if defined(__clang__)
+#define PTL_NOOPTIMIZE __attribute__((optnone))
+#elif defined(__GNUC__)
+#define PTL_NOOPTIMIZE __attribute__((optimize("0")))
 #else
 #define PTL_NOOPTIMIZE
 #endif
+#endif
+
+#ifndef PTL_WEAK
+#ifdef __GNUC__
+#define PTL_WEAK __attribute__((weak))
+#else
+#define PTL_WEAK
+#endif
+#endif
+
+#ifndef PTL_NORETURN
+#define PTL_NORETURN [[noreturn]]
 #endif
 
 #define PTL_HAS_EXCEPTIONS 1
