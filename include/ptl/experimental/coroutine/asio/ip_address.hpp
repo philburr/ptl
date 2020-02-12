@@ -5,7 +5,7 @@
 #include <variant>
 #include <cassert>
 
-namespace ptl::experimental::asio {
+namespace ptl::experimental::coroutine::asio {
 
 class ipv4_address
 {
@@ -237,4 +237,4 @@ private:
     std::variant<ipv4_address, ipv6_address> address_;
 };
 
-} // namespace ptl::experimental::asio
+} // namespace ptl::experimental::coroutine::asio

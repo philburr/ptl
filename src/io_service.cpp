@@ -1,5 +1,5 @@
-#include "ptl/experimental/asio/io_service.hpp"
-#include "ptl/experimental/asio/descriptor.hpp"
+#include "ptl/experimental/coroutine/asio/io_service.hpp"
+#include "ptl/experimental/coroutine/asio/descriptor.hpp"
 #include <cassert>
 #include <system_error>
 #include <mutex>
@@ -11,7 +11,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-namespace ptl::experimental::asio::detail {
+namespace ptl::experimental::coroutine::asio::detail {
 
 std::mutex libev_guard_;
 
@@ -213,7 +213,7 @@ expected_void io_service_impl::getpeername(descriptor::native_type socket, void*
     return {};
 }
 
-} // namespace ptl::experimental::asio::detail
+} // namespace ptl::experimental::coroutine::asio::detail
 
 #if 0
 io_service::io_service() {

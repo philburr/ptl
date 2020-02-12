@@ -4,17 +4,15 @@
 #endif
 #include <system_error>
 #include <experimental/coroutine>
-#include <ptl/expected.hpp>
-#include <utility>
 
 
-namespace ptl::experimental::asio::detail {
+namespace ptl::experimental::coroutine::asio::detail {
 
 template<typename T>
 using expected = ptl::expected<T, ptl::error_code, ptl::error_policy_assert>;
 
 template <typename DERIVED>
-struct socket_operation : public ptl::experimental::asio::io_service_operation
+struct io_operation : public ptl::experimental::coroutine::asio::io_service_operation
 {
 private:
     std::experimental::coroutine_handle<> coroutine_ = nullptr;
@@ -55,13 +53,12 @@ public:
     void resume() {
         coroutine_.resume();
     }
+
 };
 
 template <typename DERIVED>
-struct socket_xfer_operation : public socket_operation<DERIVED>
+struct io_xfer_operation : public io_operation<DERIVED>
 {
-    socket_xfer_operation() noexcept = default;
-
     size_t get_return() {
         return transferred_;
     }
@@ -71,4 +68,4 @@ protected:
     size_t transferred_;
 };
 
-} // namespace ptl::experimental::asio::detail
+} // namespace ptl::experimental::coroutine::asio::detail

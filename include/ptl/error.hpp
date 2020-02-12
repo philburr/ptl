@@ -17,7 +17,7 @@ struct error_code {
     explicit error_code(const type v) noexcept : value_(v)
     {}
 
-    template<typename STR, std::enable_if_t<std::is_convertible_v<std::remove_cvref_t<STR>, std::string>, void> = 0>
+    template<typename STR, std::enable_if_t<std::is_convertible_v<std::remove_cv_t<std::remove_reference_t<STR>>, std::string>, void> = 0>
     error_code(const type v, STR&& reason) noexcept : value_(v)
     {
         ext_ = { {}, std::forward<STR>(reason) };
@@ -28,7 +28,7 @@ struct error_code {
     {
         ext_ = { std::move(loc) };
     }
-    template<typename STR, std::enable_if_t<std::is_convertible_v<std::remove_cvref_t<STR>, std::string>, void> = 0>
+    template<typename STR, std::enable_if_t<std::is_convertible_v<std::remove_cv_t<std::remove_reference_t<STR>>, std::string>, void> = 0>
     error_code(error_location_tag, const type v, STR&& reason, source_location loc = source_location::current())
         : value_(v)
     {
@@ -49,7 +49,7 @@ struct error_code {
     struct error_code_ext {
         error_code_ext() = default;
 
-        template<typename STR, std::enable_if_t<std::is_convertible_v<std::remove_cvref_t<STR>, std::string>, void> = 0>
+        template<typename STR, std::enable_if_t<std::is_convertible_v<std::remove_cv_t<std::remove_reference_t<STR>>, std::string>, void> = 0>
         error_code_ext(const source_location& loc, STR&& reason) : loc_ { loc }, reason_ { std::forward<STR>(reason) } {}
         error_code_ext(const source_location& loc) : loc_{ loc }, reason_{} {}
 

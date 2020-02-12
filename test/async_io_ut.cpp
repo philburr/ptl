@@ -11,11 +11,11 @@
 #include "ptl/experimental/coroutine/sync_wait.hpp"
 #include "ptl/experimental/coroutine/wait_all.hpp"
 #include "ptl/experimental/coroutine/async_scope.hpp"
-#include "ptl/experimental/asio/ip_endpoint.hpp"
+#include "ptl/experimental/coroutine/asio/ip_endpoint.hpp"
 
 #include "ptl/mpmc_queue.hpp"
 
-using ptl::experimental::asio::socket;
+using ptl::experimental::coroutine::asio::socket;
 using ptl::experimental::coroutine::sync_wait;
 using ptl::experimental::coroutine::Task;
 using ptl::experimental::coroutine::wait_all;
@@ -23,7 +23,7 @@ using ptl::experimental::coroutine::async_scope;
 
 TEST_CASE("socket pair")
 {
-    ptl::experimental::asio::io_service srv;
+    ptl::experimental::coroutine::asio::io_service srv;
 
     auto [read_socket, write_socket] = socket::create_pair(srv);
 
@@ -53,7 +53,7 @@ TEST_CASE("socket pair")
 
 TEST_CASE("socket connection")
 {
-    using namespace ptl::experimental::asio;
+    using namespace ptl::experimental::coroutine::asio;
     io_service svc;
 
     auto server = socket::create_tcpv4(svc);

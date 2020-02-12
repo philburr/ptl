@@ -1,27 +1,27 @@
 #pragma once
 
 #include "socket.hpp"
-#include "detail/socket_operation.hpp"
+#include "detail/io_operation.hpp"
 
-namespace ptl::experimental::asio {
+namespace ptl::experimental::coroutine::asio {
 
-struct socket_accept_operation : public detail::socket_operation<socket_accept_operation>
+struct socket_accept_operation : public detail::io_operation<socket_accept_operation>
 {
     socket_accept_operation(socket& s)
-        : socket_operation<socket_accept_operation>()
+        : io_operation<socket_accept_operation>()
         , socket_(s.internal())
         , accepted_socket_(socket_internal::internal_create(s.internal()))
     {}
 
 private:
-    friend class detail::socket_operation<socket_accept_operation>;
+    friend class detail::io_operation<socket_accept_operation>;
     bool begin()
     {
         auto r = socket_.accept();
         if (r.is_error()) {
             if (r.error().value() == EINPROGRESS || r.error().value() == EAGAIN) {
                 // we need notification
-                socket_.start_io(ptl::experimental::asio::io_kind::read, this);
+                socket_.start_io(ptl::experimental::coroutine::asio::io_kind::read, this);
                 return false;
             }
             ec_ = r.error();
@@ -51,4 +51,4 @@ private:
     socket accepted_socket_;
 };
 
-} // namespace ptl::experimental::asio
+} // namespace ptl::experimental::coroutine::asio

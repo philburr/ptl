@@ -4,9 +4,18 @@ project(PTL)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/catch2/contrib")
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g" CACHE STRING "Override CXX Flags" FORCE)
+set(CMAKE_CXX_FLAGS_DEBUG "-Og -g" CACHE STRING "Override CXX Flags" FORCE)
 
-option(PTL_BUILD_UNITTEST "Build PTL Unittests" ON)
+set(PTL_IS_SUBPROJECT TRUE)
+set(PTL_ON_IF_SUBPROJECT ON)
+set(PTL_OFF_IF_SUBPROJECT OFF)
+if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+	set(PTL_IS_SUBPROJECT FALSE)
+	set(PTL_ON_IF_SUBPROJECT OFF)
+	set(PTL_OFF_IF_SUBPROJECT ON)
+endif()
+
+option(PTL_BUILD_UNITTEST "Build PTL Unittests" ${PTL_OFF_IF_SUBPROJECT})
 option(PTL_BUILD_COROUTINES "Build PTL Coroutines" ON)
 
 
@@ -45,7 +54,7 @@ target_include_directories(ptl PUBLIC ${PTL_SOURCE_DIR}/include)
 target_link_libraries(ptl PUBLIC ${LIBEV_LIBRARIES})
 target_include_directories(ptl PUBLIC ${LIBEV_INCLUDE_DIR})
 if (${BUILD_COROUTINE})
-	target_compile_options(ptl PUBLIC -fcoroutines-ts -stdlib=libc++ -mllvm -inline-threshold=500000)
+	target_compile_options(ptl PUBLIC -fcoroutines-ts -stdlib=libc++)
 	target_compile_definitions(ptl PUBLIC BUILD_COROUTINE)
 	target_compile_features(ptl PUBLIC cxx_std_20)
 	target_link_options(ptl PUBLIC -stdlib=libc++)
@@ -54,5 +63,11 @@ else()
 endif()
 
 
+if (${PTL_BUILD_UNITTEST})
+	include(CTest)
+	enable_testing()
+endif()
+
 add_subdirectory(external)
 add_subdirectory(test)
+

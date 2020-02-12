@@ -1,6 +1,6 @@
 #pragma once
 
-namespace ptl::experimental::asio {
+namespace ptl::experimental::coroutine::asio {
 
 struct descriptor;
 struct descriptor_service_data;

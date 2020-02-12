@@ -1,7 +1,7 @@
 #pragma once
 #include "ip_address.hpp"
 
-namespace ptl::experimental::asio {
+namespace ptl::experimental::coroutine::asio {
 
 class ipv4_endpoint
 {
@@ -93,4 +93,4 @@ private:
     std::variant<ipv4_endpoint, ipv6_endpoint> ep_;
 };
 
-} // namespace ptl::experimental::asio
+} // namespace ptl::experimental::coroutine::asio

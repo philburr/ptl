@@ -5,20 +5,20 @@
 
 namespace ptl::experimental::coroutine::asio {
 
-struct socket_recv_operation : public detail::io_xfer_operation<socket_recv_operation>
+struct file_read_operation : public detail::io_xfer_operation<file_read_operation>
 {
-    socket_recv_operation(socket& s, void* buffer, size_t sz, bool all) noexcept
-        : io_xfer_operation<socket_recv_operation>()
-        , socket_(s.internal()), buffer_(static_cast<uint8_t*>(buffer)), size_(sz), received_(0), all_(all)
+    file_read_operation(file& f, void* buffer, size_t sz, bool all)
+        : io_xfer_operation<file_read_operation>()
+        , file_(f.internal()), buffer_(static_cast<uint8_t*>(buffer)), size_(sz), received_(0), all_(all)
     {
         
     }
 
 private:
-    friend class detail::io_operation<socket_recv_operation>;
+    friend class detail::io_operation<file_read_operation>;
     bool begin()
     {
-        int r = socket_.recv(buffer_, size_, 0);
+        int r = file_.read(buffer_, size_, 0);
         if (r < 0) {
             int e = errno;
             if (e == EAGAIN || e == EWOULDBLOCK) {
@@ -39,22 +39,24 @@ private:
     // called when io_service says there is something to do
     void work() override
     {
-        int r = socket_.recv(buffer_ + received_, size_ - received_, 0);
+        int r = file_.read(buffer_ + received_, size_ - received_, 0);
         if (r < 0) {
-            ec_ = ptl::error_code{ errno };
-        } else {
-            received_ += r;
-            if (r > 0 && all_ && received_ < size_) {
-                socket_.start_io(ptl::experimental::coroutine::asio::io_kind::read, this);
-                return;
-            }
-            transferred_ = received_;
+            // handle error
+            assert(false);
         }
+
+        received_ += r;
+        if (all_ && received_ < size_) {
+            socket_.start_io(ptl::experimental::coroutine::asio::io_kind::read, this);
+            return;
+        }
+        transferred_ = received_;
+        ec_ = std::error_code();
         resume();
     }
 
 
-    socket_internal& socket_;
+    file_internal& socket_;
     uint8_t* buffer_;
     size_t size_;
     size_t received_;

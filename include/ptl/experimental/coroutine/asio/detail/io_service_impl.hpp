@@ -2,8 +2,8 @@
 #include <mutex>
 #include <atomic>
 
-#include "ptl/experimental/asio/detail/io_service_definitions.hpp"
-#include "ptl/experimental/asio/descriptor.hpp"
+#include "ptl/experimental/coroutine/asio/detail/io_service_definitions.hpp"
+#include "ptl/experimental/coroutine/asio/descriptor.hpp"
 #include "ptl/expected.hpp"
 
 // FIXME: find a home:
@@ -22,7 +22,7 @@ static inline constexpr T* container_of( M *ptr, const M T::*member ) {
 typedef struct ev_io ev_io;
 struct ev_loop;
 
-namespace ptl::experimental::asio::detail {
+namespace ptl::experimental::coroutine::asio::detail {
 
 using expected_socket = ptl::expected<descriptor::native_type, ptl::error_code>;
 using expected_void = ptl::expected<void, ptl::error_code>;
@@ -66,6 +66,9 @@ public:
     void start_io(detail::descriptor_service_data &data, io_kind kind, io_service_operation *op);
     void stop_io(descriptor_service_data &data);
 
+    void write(descriptor::native_type d, const uint8_t* buffer, size_t sz);
+    ssize_t read(descriptor::native_type d, uint8_t* buffer, size_t sz);
+
 private:
     struct ev_loop *event_loop_;
     std::atomic<bool> running_;
@@ -73,4 +76,4 @@ private:
     static void ev_notification(struct ev_loop* loop, ev_io* io, int events);
 };
 
-} // namespace ptl::experimental::asio::detail
+} // namespace ptl::experimental::coroutine::asio::detail
