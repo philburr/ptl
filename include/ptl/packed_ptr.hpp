@@ -282,7 +282,7 @@ struct AtomicPackedPtr
         } while (!data_.compare_exchange_weak(expected, desired, std::memory_order_release));
     }
 
-    std::pair<T*, VT> get_add(signed VT delta) const noexcept
+    std::pair<T*, VT> get_add(VT delta) const noexcept
     {
         uintptr_t expected, desired;
         VT old;

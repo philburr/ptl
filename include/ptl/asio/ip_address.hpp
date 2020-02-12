@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <variant>
+#include <cassert>
 
 namespace ptl::asio {
 
@@ -164,21 +165,21 @@ public:
         return ipv6_address{0, 0, 0, 0, 0, 0, 0, 0};
     }
 
-    constexpr bool operator==(ipv6_address other) const
+    bool operator==(ipv6_address other) const
     {
         return std::equal(address_.begin(), address_.end(), other.address_.begin(), other.address_.end());
     }
-    constexpr bool operator!=(ipv6_address other) const
+    bool operator!=(ipv6_address other) const
     {
         return !operator==(other);
     }
-    constexpr bool operator<(ipv6_address other) const
+    bool operator<(ipv6_address other) const
     {
         auto [left, right] =
             std::mismatch(address_.begin(), address_.end() - 1, other.address_.begin(), other.address_.end() - 1);
         return *left < *right;
     }
-    constexpr bool operator>(ipv6_address other) const
+    bool operator>(ipv6_address other) const
     {
         return other.operator<(*this);
     }

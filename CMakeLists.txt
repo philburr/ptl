@@ -6,26 +6,39 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/catch2/contr
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g" CACHE STRING "Override CXX Flags" FORCE)
 
+option(PTL_BUILD_UNITTEST "Build PTL Unittests" ON)
+option(PTL_BUILD_COROUTINES "Build PTL Coroutines" OFF)
+
+
 find_package(LibEv REQUIRED)
 find_package(Threads REQUIRED)
 
 set(BUILD_COROUTINE 0)
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-	string(REPLACE "." ";" CLANG_VERSION ${CMAKE_CXX_COMPILER_VERSION})
-	list(GET CLANG_VERSION 0 CLANG_VERSION_MAJOR)
-	list(GET CLANG_VERSION 1 CLANG_VERSION_MINOR)
-	list(GET CLANG_VERSION 2 CLANG_VERSION_PATCH)
+if (PTL_BUILD_COROUTINES STREQUAL "ON")
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+		string(REPLACE "." ";" CLANG_VERSION ${CMAKE_CXX_COMPILER_VERSION})
+		list(GET CLANG_VERSION 0 CLANG_VERSION_MAJOR)
+		list(GET CLANG_VERSION 1 CLANG_VERSION_MINOR)
+		list(GET CLANG_VERSION 2 CLANG_VERSION_PATCH)
 
-	if (${CLANG_VERSION_MAJOR} GREATER_EQUAL 9)
-		set(BUILD_COROUTINE 1)
+		if (${CLANG_VERSION_MAJOR} GREATER_EQUAL 9)
+			set(BUILD_COROUTINE 1)
+		endif()
 	endif()
 endif()
 
-add_library(ptl
+set(PTL_SOURCES
 	src/scope_guard.cpp
 	src/assert.cpp
 	src/io_service.cpp
-	src/socket.cpp
+)
+
+if (BUILD_COROUTINE)
+list(APPEND PTL_SOURCES src/socket.cpp)
+endif()
+
+add_library(ptl
+	${PTL_SOURCES}
 )
 
 target_include_directories(ptl PUBLIC ${PTL_SOURCE_DIR}/include)
