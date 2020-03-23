@@ -51,7 +51,7 @@ private:
 
     SListEntry<T, BIND> *to_entry(T *item) const noexcept
     {
-        return reinterpret_cast<ListEntry<T, BIND> *>(reinterpret_cast<uintptr_t>(item) + BIND::offset);
+        return reinterpret_cast<SListEntry<T, BIND> *>(reinterpret_cast<uintptr_t>(item) + BIND::offset);
     }
     T *from_entry() const noexcept
     {

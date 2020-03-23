@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-/*static*/ void ptl::detail::ScopeGuardImplBase::warnAboutToCrash() noexcept
+/*static*/ void ptl::detail::scope_guard_impl_base::warn_about_to_crash() noexcept
 {
     // Ensure the availability of std::cerr
     std::ios_base::Init ioInit;

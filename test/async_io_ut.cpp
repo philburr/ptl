@@ -6,13 +6,14 @@
 
 #include "catch2/catch.hpp"
 #include "ptl/scope_guard.hpp"
-#include "ptl/experimental/asio/socket.hpp"
+#include "ptl/experimental/coroutine/asio/socket.hpp"
 #include "ptl/experimental/coroutine/task.hpp"
 #include "ptl/experimental/coroutine/sync_wait.hpp"
 #include "ptl/experimental/coroutine/wait_all.hpp"
 #include "ptl/experimental/coroutine/async_scope.hpp"
+#include "ptl/experimental/asio/ip_endpoint.hpp"
 
-#include "ptl/asio/ip_endpoint.hpp"
+#include "ptl/mpmc_queue.hpp"
 
 using ptl::experimental::asio::socket;
 using ptl::experimental::coroutine::sync_wait;
@@ -22,7 +23,7 @@ using ptl::experimental::coroutine::async_scope;
 
 TEST_CASE("socket pair")
 {
-    ptl::asio::io_service srv;
+    ptl::experimental::asio::io_service srv;
 
     auto [read_socket, write_socket] = socket::create_pair(srv);
 
@@ -33,7 +34,8 @@ TEST_CASE("socket pair")
             auto res = co_await read_socket.recv(output, 2);
             output[2] = 0;
 
-            REQUIRE(res == 2);
+            REQUIRE(res.is_value());
+            REQUIRE(res.value() == 2);
             REQUIRE(strcmp(output, "hi") == 0);
             srv.stop();
             co_return;
@@ -51,12 +53,14 @@ TEST_CASE("socket pair")
 
 TEST_CASE("socket connection")
 {
-    using namespace ptl::asio;
-    io_service srv;
+    using namespace ptl::experimental::asio;
+    io_service svc;
 
-    auto server = socket::create_tcpv4(srv);
-    server.bind(ipv4_endpoint{ ipv4_address::loopback(), 9099 });
+    auto server = socket::create_tcpv4(svc);
+    auto ep = ipv4_endpoint{ ipv4_address::loopback(), 0 };
+    server.bind(ep);
     server.listen();
+    ep = server.local_address().to_ipv4();
 
     bool running = true;
     auto server_connection = [](struct socket s) -> Task<>
@@ -66,22 +70,50 @@ TEST_CASE("socket connection")
         co_await s.shutdown();
     };
 
-    auto server_handler = [&running, &srv, server_connection](struct socket s) -> Task<>
+    auto client_connection = [](struct socket& s) -> Task<>
+    {
+        std::array<uint8_t, 64> buffer;
+
+        auto received = co_await s.recv(buffer.data(), buffer.size());
+        REQUIRE(received.is_value());
+        REQUIRE(std::string((char*)buffer.data(), received.value()) == "hello, world");
+
+        co_await s.shutdown();
+    };
+
+    auto server_handler = [&running, &svc, server_connection = std::move(server_connection)](struct socket s) -> Task<>
     {
         async_scope scope;
 
-        while (running) {
+        {
             auto c = co_await s.accept();
-            scope.spawn(server_connection(std::move(c)));
+            REQUIRE(c.is_value());
+            scope.spawn(server_connection(std::move(c.value())));
         }
         co_await scope.join();
         co_return;
     };
 
+    auto client_handler = [&running, &svc, &ep, client_connection = std::move(client_connection)]() -> Task<>
+    {
+        auto socket = socket::create_tcpv4(svc);
+        co_await socket.connect(ep);
+        co_await client_connection(socket);
+    };
+
     sync_wait(wait_all(
-        [&srv]() -> Task<> {
+        [&]() -> Task<> {
+            SCOPE_EXIT({ svc.stop(); });
+
+            co_await wait_all(
+                std::move(server_handler(std::move(server))),
+                std::move(client_handler())
+            );
+            co_return;
+        }(),
+        [&svc]() -> Task<> {
+            svc.run();
             co_return;
         }()
-
     ));
 }

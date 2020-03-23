@@ -5,10 +5,10 @@
 #endif
 #include <experimental/coroutine>
 #include "ptl/scope_guard.hpp"
-#include "ptl/exceptable.hpp"
+#include "ptl/expected.hpp"
 
 #include "ptl/experimental/coroutine/detail/schedule_awaitable.hpp"
-#include "ptl/experimental/coroutine/ordered_scheduler.hpp"
+#include "ptl/experimental/coroutine/scheduling/ordered_scheduler.hpp"
 
 namespace ptl::experimental::coroutine {
 
@@ -17,7 +17,7 @@ class Task;
 
 namespace detail {
 
-class TaskPromiseBase
+class task_promise_base
 {
 public:
     auto initial_suspend() noexcept
@@ -37,7 +37,7 @@ public:
     }
 
     void* operator new(std::size_t sz) {
-        printf("promise new: %lu\n", sz);
+        //printf("promise new: %lu\n", sz);
         return ::operator new(sz);
     }
     void operator delete(void* ptr, std::size_t sz) {
@@ -45,7 +45,7 @@ public:
     }
 
 protected:
-    TaskPromiseBase() noexcept
+    task_promise_base() noexcept
         : executor_(nullptr)
     {}
 
@@ -78,28 +78,28 @@ private:
 };
 
 template <typename T>
-class TaskPromise final : public TaskPromiseBase
+class task_promise final : public task_promise_base
 {
 public:
-    TaskPromise() noexcept
+    task_promise() noexcept
     {}
-    ~TaskPromise()
+    ~task_promise()
     {}
 
     void unhandled_exception() noexcept
     {
-        value_ = ptl::exceptable<T>(std::current_exception());
+        value_ = storage(std::current_exception());
     }
 
     template <typename VALUE_TYPE, typename = std::enable_if_t<std::is_convertible_v<VALUE_TYPE&&, T>>>
     void return_value(VALUE_TYPE&& value) noexcept(std::is_nothrow_constructible_v<T, VALUE_TYPE&&>)
     {
-        value_ = ptl::exceptable<T>(value);
+        value_ = storage(value);
     }
 
     void return_value(T& value)
     {
-        value_ = ptl::exceptable<T>(value);
+        value_ = storage(value);
     }
 
     Task<T> get_return_object() noexcept;
@@ -119,15 +119,16 @@ public:
     }
 
 private:
-    ptl::exceptable<T> value_;
+    using storage = ptl::expected<T, std::exception_ptr, ptl::error_policy_throw>;
+    storage value_;
 };
 
 // void specialization
 template<>
-class TaskPromise<void> final : public TaskPromiseBase
+class task_promise<void> final : public task_promise_base
 {
 public:
-    TaskPromise() noexcept
+    task_promise() noexcept
     {}
 
     Task<void> get_return_object() noexcept;
@@ -137,7 +138,7 @@ public:
     }
     void unhandled_exception() noexcept
     {
-        value_ = ptl::exceptable<void>(std::current_exception());
+        value_ = storage(std::current_exception());
     }
 
     void result()
@@ -146,15 +147,16 @@ public:
     }
 
 private:
-    ptl::exceptable<void> value_;
+    using storage = ptl::expected<void, std::exception_ptr, ptl::error_policy_throw>;
+    storage value_;
 };
 
 #if defined(TASK_PROMISE_REF)
 template <typename T>
-class TaskPromise<T&> final : public TaskPromiseBase
+class task_promise<T&> final : public task_promise_base
 {
 public:
-    TaskPromise() noexcept = default;
+    task_promise() noexcept = default;
 
     Task<T&> get_return_object() noexcept;
 
@@ -187,7 +189,7 @@ template <typename T = void>
 class Task
 {
 public:
-    using promise_type = detail::TaskPromise<T>;
+    using promise_type = detail::task_promise<T>;
     using value_type = T;
 
     Task() noexcept
@@ -327,21 +329,21 @@ private:
 namespace detail {
 
 template <typename T>
-Task<T> TaskPromise<T>::get_return_object() noexcept
+Task<T> task_promise<T>::get_return_object() noexcept
 {
-    return Task<T>{std::experimental::coroutine_handle<TaskPromise>::from_promise(*this)};
+    return Task<T>{std::experimental::coroutine_handle<task_promise>::from_promise(*this)};
 }
 
-inline Task<void> TaskPromise<void>::get_return_object() noexcept
+inline Task<void> task_promise<void>::get_return_object() noexcept
 {
-    return Task<void>{std::experimental::coroutine_handle<TaskPromise>::from_promise(*this)};
+    return Task<void>{std::experimental::coroutine_handle<task_promise>::from_promise(*this)};
 }
 
 #if defined(TASK_PROMISE_REF)
 template <typename T>
-Task<T&> TaskPromise<T&>::get_return_object() noexcept
+Task<T&> task_promise<T&>::get_return_object() noexcept
 {
-    return Task<T&>{std::experimental::coroutine_handle<TaskPromise>::from_promise(*this)};
+    return Task<T&>{std::experimental::coroutine_handle<task_promise>::from_promise(*this)};
 }
 #endif
 

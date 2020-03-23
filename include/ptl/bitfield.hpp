@@ -2,7 +2,7 @@
 #include <type_traits>
 
 template<typename T, size_t Offset, size_t Bits>
-struct BitFieldMember {
+struct bit_field_member {
     T value_;
 
 
@@ -18,52 +18,52 @@ struct BitFieldMember {
         return (value_ >> Offset) & mask0;
     }
 
-    constexpr BitFieldMember& operator=(T v)
+    constexpr bit_field_member& operator=(T v)
     {
         assert(v <= mask0 && "Value must fit within bitfield");
         value_ = (value_ & ~mask) | (v << Offset);
         return *this;
     }
 
-    constexpr BitFieldMember& operator+=(T v)
+    constexpr bit_field_member& operator+=(T v)
     {
         assert(T(*this) + v <= mask0 && "Value must not overflow bitfield");
         value_ += v << Offset;
         return *this;
     }
 
-    constexpr BitFieldMember& operator-=(T v)
+    constexpr bit_field_member& operator-=(T v)
     {
         assert(T(*this) >= v && "Value must not underflow bitfield");
         value_ -= v << Offset;
         return *this;
     }
 
-    constexpr BitFieldMember& operator++()
+    constexpr bit_field_member& operator++()
     {
         return *this += 1;
     }
 
-    constexpr BitFieldMember& operator++(int)
+    constexpr bit_field_member& operator++(int)
     {
-        BitFieldMember tmp(*this);
+        bit_field_member tmp(*this);
         operator++();
         return tmp;
     }
 
-    constexpr BitFieldMember& operator--()
+    constexpr bit_field_member& operator--()
     {
         return *this -= 1;
     }
 
-    constexpr BitFieldMember& operator--(int)
+    constexpr bit_field_member& operator--(int)
     {
-        BitFieldMember tmp(*this);
+        bit_field_member tmp(*this);
         operator--();
         return tmp;
     }
 };
-static_assert(std::is_standard_layout_v<BitFieldMember<int, 0, 2> >);
+static_assert(std::is_standard_layout_v<bit_field_member<int, 0, 2> >);
 
 #define BEGIN_BITFIELD_TYPE(NAME, T) \
     union NAME \
@@ -76,7 +76,7 @@ static_assert(std::is_standard_layout_v<BitFieldMember<int, 0, 2> >);
         using type = T;
 
 #define ADD_BITFIELD_MEMBER(memberName, offset, bits) \
-        BitFieldMember<type, offset, bits> memberName;
+        bit_field_member<type, offset, bits> memberName;
 
 #define END_BITFIELD_TYPE() \
     };

@@ -16,15 +16,14 @@ private:
     friend class detail::socket_operation<socket_shutdown_operation>;
     bool begin()
     {
-        int r = socket_.shutdown(ptl::asio::detail::shutdown_read_write);
-        if (r < 0) {
-            int e = errno;
-            if (e == EINPROGRESS) {
+        auto r = socket_.shutdown(ptl::experimental::asio::detail::shutdown_read_write);
+        if (r.is_error()) {
+            if (r.error().value() == EINPROGRESS) {
                 // we need notification
-                socket_.start_io(ptl::asio::io_kind::write, this);
+                socket_.start_io(ptl::experimental::asio::io_kind::write, this);
                 return false;
             }
-            assert(false);
+            ec_ = r.error();
         }
         return true;
     }
@@ -33,11 +32,9 @@ private:
 
     void work() override
     {
-        int r = socket_.shutdown(ptl::asio::detail::shutdown_read_write);
-        if (r < 0) {
-            ec_ = std::error_code(errno, std::system_category());
-        } else {
-            ec_ = std::error_code();
+        auto r = socket_.shutdown(ptl::experimental::asio::detail::shutdown_read_write);
+        if (r.is_error()) {
+            ec_ = r.error();
         }
         resume();
     }

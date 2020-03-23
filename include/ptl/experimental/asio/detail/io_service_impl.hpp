@@ -2,8 +2,9 @@
 #include <mutex>
 #include <atomic>
 
-#include "ptl/asio/detail/io_service_definitions.hpp"
-#include "ptl/asio/descriptor.hpp"
+#include "ptl/experimental/asio/detail/io_service_definitions.hpp"
+#include "ptl/experimental/asio/descriptor.hpp"
+#include "ptl/expected.hpp"
 
 // FIXME: find a home:
 template< class T, class M >
@@ -21,7 +22,10 @@ static inline constexpr T* container_of( M *ptr, const M T::*member ) {
 typedef struct ev_io ev_io;
 struct ev_loop;
 
-namespace ptl::asio::detail {
+namespace ptl::experimental::asio::detail {
+
+using expected_socket = ptl::expected<descriptor::native_type, ptl::error_code>;
+using expected_void = ptl::expected<void, ptl::error_code>;
 
 struct descriptor_service_data;
 enum {
@@ -41,14 +45,17 @@ public:
     void run();
 
     std::pair<descriptor::native_type, descriptor::native_type> create_pair(); 
+
     descriptor::native_type create_socket(int domain, int type, int protocol);
 
-    int bind(descriptor::native_type socket, const void *address, size_t address_len);
-    int connect(descriptor::native_type socket, const void *address, size_t address_len);
-    int listen(descriptor::native_type socket, int backlog);
-    int accept(descriptor::native_type socket, void *address, size_t* address_len);
-    int shutdown(descriptor::native_type socket, int how);
-    int close(descriptor::native_type socket);
+    expected_void bind(descriptor::native_type socket, const void *address, size_t address_len);
+    expected_void connect(descriptor::native_type socket, const void *address, size_t address_len);
+    expected_void listen(descriptor::native_type socket, int backlog);
+    expected_socket accept(descriptor::native_type socket, void *address, size_t* address_len);
+    expected_void shutdown(descriptor::native_type socket, int how);
+    expected_void close(descriptor::native_type socket);
+    expected_void getsockname(descriptor::native_type socket, void* address, size_t* address_len);
+    expected_void getpeername(descriptor::native_type socket, void* address, size_t* address_len);
 
     ssize_t send(descriptor::native_type socket, const uint8_t* buffer, size_t sz, int flags);
     ssize_t recv(descriptor::native_type socket, uint8_t* buffer, size_t sz, int flags);
@@ -66,4 +73,4 @@ private:
     static void ev_notification(struct ev_loop* loop, ev_io* io, int events);
 };
 
-} // namespace ptl::asio::detail
+} // namespace ptl::experimental::asio::detail

@@ -7,7 +7,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/catch2/contr
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g" CACHE STRING "Override CXX Flags" FORCE)
 
 option(PTL_BUILD_UNITTEST "Build PTL Unittests" ON)
-option(PTL_BUILD_COROUTINES "Build PTL Coroutines" OFF)
+option(PTL_BUILD_COROUTINES "Build PTL Coroutines" ON)
 
 
 find_package(LibEv REQUIRED)

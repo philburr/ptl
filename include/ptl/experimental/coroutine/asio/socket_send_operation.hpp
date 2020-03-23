@@ -7,7 +7,7 @@ namespace ptl::experimental::asio {
 
 struct socket_send_operation : public detail::socket_xfer_operation<socket_send_operation>
 {
-    socket_send_operation(socket& s, const void* buffer, size_t sz)
+    socket_send_operation(socket& s, const void* buffer, size_t sz) noexcept
         : socket_xfer_operation<socket_send_operation>()
         , socket_(s.internal())
         , buffer_(static_cast<const uint8_t*>(buffer))
@@ -24,7 +24,7 @@ private:
             int e = errno;
             if (e == EAGAIN || e == EWOULDBLOCK) {
                 // we need notification
-                socket_.start_io(ptl::asio::io_kind::write, this);
+                socket_.start_io(ptl::experimental::asio::io_kind::write, this);
                 return false;
             }
             assert(false);
@@ -35,10 +35,12 @@ private:
     void work() override
     {
         int r = socket_.send(buffer_, size_, 0);
-        assert(r == size_);
-        sent_ = size_;
-        transferred_ = sent_;
-        ec_ = std::error_code();
+        if (r < 0) {
+            ec_ = ptl::error_code{ errno };
+        } else {
+            sent_ = size_;
+            transferred_ = sent_;
+        }
         resume();
     }
 

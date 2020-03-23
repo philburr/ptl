@@ -2,7 +2,7 @@
 
 namespace ptl {
 
-struct NullLock {
+struct null_lock {
     void lock() {}
     void unlock() {}
 };

@@ -17,28 +17,27 @@ private:
     friend class detail::socket_operation<socket_accept_operation>;
     bool begin()
     {
-        int r = socket_.accept();
-        if (r < 0) {
-            int e = errno;
-            if (e == EINPROGRESS) {
+        auto r = socket_.accept();
+        if (r.is_error()) {
+            if (r.error().value() == EINPROGRESS || r.error().value() == EAGAIN) {
                 // we need notification
-                socket_.start_io(ptl::asio::io_kind::read, this);
+                socket_.start_io(ptl::experimental::asio::io_kind::read, this);
                 return false;
             }
-            assert(false);
+            ec_ = r.error();
+        } else {
+            accepted_socket_ = socket_internal::internal_create(socket_, r.value());
         }
-        accepted_socket_ = socket_internal::internal_create(socket_, r);
         return true;
     }
 
     void work() override
     {
-        int r = socket_.accept();
-        if (r < 0) {
-            ec_ = std::error_code(errno, std::system_category());
+        auto r = socket_.accept();
+        if (r.is_error()) {
+            ec_ = r.error();
         } else {
-            ec_ = std::error_code();
-            accepted_socket_ = socket_internal::internal_create(socket_, r);
+            accepted_socket_ = socket_internal::internal_create(socket_, r.value());
         }
         resume();
     }

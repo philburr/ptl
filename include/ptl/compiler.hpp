@@ -50,3 +50,8 @@
 #define CONCATENATE_IMPL(s1, s2) s1##s2
 #define CONCATENATE(s1, s2) CONCATENATE_IMPL(s1, s2)
 #define ANONYMOUS_VARIABLE(name) CONCATENATE(name, __COUNTER__)
+
+#if defined(__clang__)
+#elif defined(__GNUC_)
+static inline int __builtin_COLUMN() { return 0; }
+#endif

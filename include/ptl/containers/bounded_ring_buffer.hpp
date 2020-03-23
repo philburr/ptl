@@ -7,7 +7,7 @@
 
 namespace ptl {
 
-template<typename T, size_t N, typename LOCKING = NullLock>
+template<typename T, size_t N, typename LOCKING = null_lock>
 class bounded_ring_buffer
 {
 public:

@@ -4,6 +4,7 @@
 #include "ptl/experimental/coroutine/task.hpp"
 #include "ptl/experimental/coroutine/simple_task.hpp"
 #include "ptl/experimental/coroutine/sync_wait.hpp"
+#include "ptl/experimental/coroutine/scheduling/thread_pool.hpp"
 
 using namespace ptl::experimental::coroutine;
 

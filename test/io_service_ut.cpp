@@ -1,7 +1,7 @@
 #include "catch2/catch.hpp"
-#include "ptl/asio/io_service.hpp"
+#include "ptl/experimental/asio/io_service.hpp"
 
-using namespace ptl::asio;
+using namespace ptl::experimental::asio;
 
 TEST_CASE("io_service")
 {

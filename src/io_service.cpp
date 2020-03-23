@@ -1,5 +1,5 @@
-#include "ptl/asio/io_service.hpp"
-#include "ptl/asio/descriptor.hpp"
+#include "ptl/experimental/asio/io_service.hpp"
+#include "ptl/experimental/asio/descriptor.hpp"
 #include <cassert>
 #include <system_error>
 #include <mutex>
@@ -11,7 +11,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-namespace ptl::asio::detail {
+namespace ptl::experimental::asio::detail {
 
 std::mutex libev_guard_;
 
@@ -123,35 +123,46 @@ std::pair<descriptor::native_type, descriptor::native_type> io_service_impl::cre
 
 descriptor::native_type io_service_impl::create_socket(int domain, int type, int protocol)
 {
-    int r = ::socket(domain, type, protocol);
+    int r = ::socket(domain, type | SOCK_NONBLOCK, protocol);
     if (r < 0) {
         throw std::system_error(r, std::system_category());
     }
     return r;
 }
 
-int io_service_impl::bind(descriptor::native_type socket, const void *address, size_t address_len)
+expected_void io_service_impl::bind(descriptor::native_type socket, const void *address, size_t address_len)
 {
-    // FIXME: move errno checking here
-    return ::bind(socket, (const sockaddr*)address, address_len);
+    if (0 > ::bind(socket, (const sockaddr*)address, address_len)) {
+        return { ptl::error_code{ errno } };
+    }
+    return {};
 }
 
-int io_service_impl::connect(descriptor::native_type socket, const void *address, size_t address_len)
+expected_void io_service_impl::connect(descriptor::native_type socket, const void *address, size_t address_len)
 {
-    return ::connect(socket, (const sockaddr*)address, address_len);
+    if (0 > ::connect(socket, (const sockaddr*)address, address_len)) {
+        return { ptl::error_code{ errno } };
+    }
+    return {};
 }
 
-int io_service_impl::listen(descriptor::native_type socket, int backlog)
+expected_void io_service_impl::listen(descriptor::native_type socket, int backlog)
 {
-    return ::listen(socket, backlog);
+    if (0 > ::listen(socket, backlog)) {
+        return { ptl::error_code{ errno } };
+    }
+    return {};
 }
 
-int io_service_impl::accept(descriptor::native_type socket, void* address, size_t* address_len)
+expected_socket io_service_impl::accept(descriptor::native_type socket, void* address, size_t* address_len)
 {
     unsigned int len = *address_len;
     int r = ::accept(socket, (sockaddr*)address, &len);
+    if (0 > r) {
+        return { ptl::error_code{ errno } };
+    }
     *address_len = len;
-    return r;
+    return { r };
 }
 
 ssize_t io_service_impl::send(descriptor::native_type fd, const uint8_t* buffer, size_t sz, int flags)
@@ -164,17 +175,45 @@ ssize_t io_service_impl::recv(descriptor::native_type fd, uint8_t* buffer, size_
     return ::recv(fd, buffer, sz, flags);
 }
 
-int io_service_impl::shutdown(descriptor::native_type fd, int how)
+expected_void io_service_impl::shutdown(descriptor::native_type fd, int how)
 {
-    return ::shutdown(fd, how);
+    if (0 > ::shutdown(fd, how)) {
+        return { ptl::error_code{ errno } };
+    }
+    return {};
 }
 
-int io_service_impl::close(descriptor::native_type fd)
+expected_void io_service_impl::close(descriptor::native_type fd)
 {
-    return ::close(fd);
+    if (0 > ::close(fd)) {
+        return { ptl::error_code{ errno } };
+    }
+    return {};
 }
 
-} // namespace ptl::asio::detail
+expected_void io_service_impl::getsockname(descriptor::native_type socket, void* address, size_t* address_len)
+{
+    unsigned int len = *address_len;
+    int r = ::getsockname(socket, (sockaddr*)address, &len);
+    if (0 > r) {
+        return { ptl::error_code{ errno } };
+    }
+    *address_len = len;
+    return {};
+}
+
+expected_void io_service_impl::getpeername(descriptor::native_type socket, void* address, size_t* address_len)
+{
+    unsigned int len = *address_len;
+    int r = ::getpeername(socket, (sockaddr*)address, &len);
+    if (0 > r) {
+        return { ptl::error_code{ errno } };
+    }
+    *address_len = len;
+    return {};
+}
+
+} // namespace ptl::experimental::asio::detail
 
 #if 0
 io_service::io_service() {
