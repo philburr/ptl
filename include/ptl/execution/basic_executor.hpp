@@ -69,7 +69,7 @@ private:
     std::mutex lock_;
     std::condition_variable cv_;
 
-    bool finished_;
+    bool finished_ = false;
     std::queue<std::function<void()>> work_;
 };
 

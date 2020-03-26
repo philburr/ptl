@@ -1,9 +1,9 @@
 #pragma once
 #include <cstddef>
 #include <memory>
-#include "ptl/experimental/coroutine/asio/detail/io_service_impl.hpp"
+#include "ptl/experimental/coroutine/io_service/detail/io_service_impl.hpp"
 
-namespace ptl::experimental::coroutine::asio {
+namespace ptl::experimental::coroutine::iosvc {
 
 class io_service : protected detail::io_service_impl
 {

@@ -5,7 +5,7 @@
 
 namespace ptl::experimental::coroutine::asio {
 
-struct socket_listen_operation : public detail::socket_operation<socket_listen_operation>
+struct socket_listen_operation : detail::socket_operation<socket_listen_operation>, iosvc::io_service_operation
 {
     socket_listen_operation(socket& s)
         : socket_operation<socket_listen_operation>()
@@ -16,27 +16,26 @@ private:
     friend class detail::socket_operation<socket_listen_operation>;
     bool begin()
     {
-        int r = socket_.listen();
-        if (r < 0) {
-            int e = errno;
-            if (e == EINPROGRESS || e == EAGAIN) {
+        auto r = socket_.listen();
+        if (r.is_error()) {
+            if (r.error().value() == EINPROGRESS || r.error().value() == EAGAIN) {
                 // we need notification
                 socket_.start_io(ptl::experimental::coroutine::asio::io_kind::read, this);
                 return false;
             }
-            assert(false);
+            ec_ = r.error();
+            return true;
         }
         have_listened_ = true;
 
         r = socket_.get_local();
-        if (r < 0) {
-            int e = errno;
-            if (e == EINPROGRESS || e == EAGAIN) {
+        if (r.is_error()) {
+            if (r.error().value() == EINPROGRESS || r.error().value() == EAGAIN) {
                 // we need notification
                 socket_.start_io(ptl::experimental::coroutine::asio::io_kind::read, this);
                 return false;
             }
-            assert(false);
+            ec_ = r.error();
         }
         return true;
     }

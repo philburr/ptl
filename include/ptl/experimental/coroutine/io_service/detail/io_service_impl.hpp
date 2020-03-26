@@ -1,9 +1,11 @@
 #pragma once
-#include <mutex>
+//#include <mutex>
+#include <list>
 #include <atomic>
+#include <ev.h>
 
-#include "ptl/experimental/coroutine/asio/detail/io_service_definitions.hpp"
-#include "ptl/experimental/coroutine/asio/descriptor.hpp"
+#include "ptl/experimental/coroutine/io_service/detail/io_service_definitions.hpp"
+#include "ptl/experimental/coroutine/io_service/descriptor.hpp"
 #include "ptl/expected.hpp"
 
 // FIXME: find a home:
@@ -21,19 +23,42 @@ static inline constexpr T* container_of( M *ptr, const M T::*member ) {
 
 typedef struct ev_io ev_io;
 struct ev_loop;
+struct ev_child;
 
-namespace ptl::experimental::coroutine::asio::detail {
+namespace ptl::experimental::coroutine::iosvc::detail {
 
 using expected_socket = ptl::expected<descriptor::native_type, ptl::error_code>;
 using expected_void = ptl::expected<void, ptl::error_code>;
+using expected_size_t = ptl::expected<size_t, ptl::error_code>;
 
-struct descriptor_service_data;
+struct descriptor_service_data
+{
+    descriptor_service_data(descriptor d)
+        : descriptor_(d)
+        , registered_events_(0)
+        , current_io_(io_kind::none)
+        , current_op_(nullptr)
+    {}
+
+    descriptor descriptor_;
+    ev_io ev_;
+    int registered_events_;
+    io_kind current_io_;
+    io_service_operation* current_op_;
+};
+static_assert(std::is_standard_layout_v<descriptor_service_data>);
+
 enum {
     shutdown_read,
     shutdown_write,
     shutdown_read_write,
 };
 
+struct process_service_data {
+    int pid;
+    int rc;
+    io_service_operation* notification;
+};
 
 class io_service_impl
 {
@@ -60,20 +85,28 @@ public:
     ssize_t send(descriptor::native_type socket, const uint8_t* buffer, size_t sz, int flags);
     ssize_t recv(descriptor::native_type socket, uint8_t* buffer, size_t sz, int flags);
 
-    void register_descriptor(descriptor fd, detail::descriptor_service_data *&data);
-    void deregister_descriptor(descriptor fd, detail::descriptor_service_data *&data);
+    expected_size_t write(descriptor::native_type socket, const uint8_t* buffer, size_t sz);
+    expected_size_t read(descriptor::native_type socket, uint8_t* buffer, size_t sz);
+
+    std::unique_ptr<detail::descriptor_service_data> register_descriptor(descriptor fd);
+    void deregister_descriptor(descriptor fd, std::unique_ptr<detail::descriptor_service_data> data);
+
+    void register_process_notification(int pid, detail::process_service_data& data);
+    void deregister_process_notification(detail::process_service_data& data);
 
     void start_io(detail::descriptor_service_data &data, io_kind kind, io_service_operation *op);
     void stop_io(descriptor_service_data &data);
-
-    void write(descriptor::native_type d, const uint8_t* buffer, size_t sz);
-    ssize_t read(descriptor::native_type d, uint8_t* buffer, size_t sz);
+    void start_notification(detail::process_service_data &data, io_service_operation *op);
+    void stop_notification(detail::process_service_data &data);
 
 private:
     struct ev_loop *event_loop_;
+    std::unique_ptr<ev_child> process_monitor_;
     std::atomic<bool> running_;
+    std::list<std::reference_wrapper<process_service_data>> process_watchers_;
 
     static void ev_notification(struct ev_loop* loop, ev_io* io, int events);
+    static void ev_process_change(struct ev_loop* loop, struct ev_child* child, int events);
 };
 
 } // namespace ptl::experimental::coroutine::asio::detail

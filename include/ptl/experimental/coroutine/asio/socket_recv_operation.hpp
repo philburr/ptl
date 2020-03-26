@@ -1,11 +1,11 @@
 #pragma once
 
 #include "socket.hpp"
-#include "detail/io_operation.hpp"
+#include "ptl/experimental/coroutine/io_service/detail/io_operation.hpp"
 
 namespace ptl::experimental::coroutine::asio {
 
-struct socket_recv_operation : public detail::io_xfer_operation<socket_recv_operation>
+struct socket_recv_operation : iosvc::detail::io_xfer_operation<socket_recv_operation>, iosvc::io_service_operation
 {
     socket_recv_operation(socket& s, void* buffer, size_t sz, bool all) noexcept
         : io_xfer_operation<socket_recv_operation>()
@@ -15,7 +15,7 @@ struct socket_recv_operation : public detail::io_xfer_operation<socket_recv_oper
     }
 
 private:
-    friend class detail::io_operation<socket_recv_operation>;
+    friend class iosvc::detail::io_operation<socket_recv_operation>;
     bool begin()
     {
         int r = socket_.recv(buffer_, size_, 0);
@@ -23,14 +23,15 @@ private:
             int e = errno;
             if (e == EAGAIN || e == EWOULDBLOCK) {
                 // we need notification
-                socket_.start_io(ptl::experimental::coroutine::asio::io_kind::read, this);
+                socket_.start_io(iosvc::io_kind::read, this);
                 return false;
             }
-            assert(false);
+            ec_ = ptl::error_code{ errno };
+            return true;
         }
         received_ = r;
         if (all_ && received_ < size_) {
-            socket_.start_io(ptl::experimental::coroutine::asio::io_kind::read, this);
+            socket_.start_io(iosvc::io_kind::read, this);
             return false;
         }
         return true;
@@ -45,7 +46,7 @@ private:
         } else {
             received_ += r;
             if (r > 0 && all_ && received_ < size_) {
-                socket_.start_io(ptl::experimental::coroutine::asio::io_kind::read, this);
+                socket_.start_io(iosvc::io_kind::read, this);
                 return;
             }
             transferred_ = received_;

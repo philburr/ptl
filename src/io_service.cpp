@@ -1,9 +1,7 @@
-#include "ptl/experimental/coroutine/asio/io_service.hpp"
-#include "ptl/experimental/coroutine/asio/descriptor.hpp"
+#include "ptl/experimental/coroutine/io_service/io_service.hpp"
 #include <cassert>
 #include <system_error>
 #include <mutex>
-#include <ev.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -11,30 +9,16 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-namespace ptl::experimental::coroutine::asio::detail {
+namespace ptl::experimental::coroutine::iosvc::detail {
 
 std::mutex libev_guard_;
-
-struct descriptor_service_data
-{
-    descriptor_service_data(descriptor d)
-        : descriptor_(d)
-        , registered_events_(0)
-        , current_io_(io_kind::none)
-        , current_op_(nullptr)
-    {}
-
-    descriptor descriptor_;
-    ev_io ev_;
-    int registered_events_;
-    io_kind current_io_;
-    io_service_operation* current_op_;
-};
-static_assert(std::is_standard_layout_v<descriptor_service_data>);
 
 io_service_impl::io_service_impl()
 {
     static std::atomic<int> count__ = 0;
+
+    process_monitor_ = std::make_unique<ev_child>();
+    ev_child_init(process_monitor_.get(), ev_process_change, 0, 0);
 
     struct ev_loop* loop;
     if (count__++ == 0) {
@@ -46,8 +30,9 @@ io_service_impl::io_service_impl()
     if (loop == nullptr) {
         throw std::bad_alloc();
     }
+    ev_set_userdata(loop, static_cast<void*>(this));
 
-    running_ = false;
+    running_ = true;
     event_loop_ = loop;
 }
 
@@ -60,28 +45,38 @@ void io_service_impl::stop() noexcept
 {
     running_ = false;
     ev_break(event_loop_, EVBREAK_ALL);
+    ev_child_stop(event_loop_, process_monitor_.get());
 }
 
 void io_service_impl::run()
 {
-    running_ = true;
+    ev_child_start(event_loop_, process_monitor_.get());
     while (running_) {
         ev_run(event_loop_, EVRUN_ONCE);
     }
 }
 
-void io_service_impl::register_descriptor(descriptor fd, detail::descriptor_service_data*& data)
+std::unique_ptr<detail::descriptor_service_data> io_service_impl::register_descriptor(descriptor fd)
 {
-    data = new descriptor_service_data(fd);
+    auto data = std::make_unique<descriptor_service_data>(fd);
     data->registered_events_ = EV_READ;
     ev_io_init(&data->ev_, ev_notification, fd.native_descriptor(), EV_READ);
+    return data;
 }
 
-void io_service_impl::deregister_descriptor(descriptor fd, detail::descriptor_service_data*& data)
+void io_service_impl::deregister_descriptor(descriptor fd, std::unique_ptr<detail::descriptor_service_data> data)
 {
     ev_io_stop(event_loop_, &data->ev_);
-    delete data;
-    data = nullptr;
+}
+
+void io_service_impl::register_process_notification(int pid, process_service_data& data)
+{
+    data.pid = pid;
+}
+
+void io_service_impl::deregister_process_notification(process_service_data& data)
+{
+    stop_notification(data);
 }
 
 void io_service_impl::start_io(detail::descriptor_service_data& data, io_kind kind, io_service_operation* op)
@@ -101,6 +96,33 @@ void io_service_impl::stop_io(descriptor_service_data& data)
     ev_io_stop(event_loop_, &data.ev_);
     data.current_io_ = io_kind::none;
     data.current_op_ = nullptr;
+}
+
+void io_service_impl::start_notification(detail::process_service_data &data, io_service_operation *op)
+{
+    data.notification = op;
+    process_watchers_.push_back(data);
+}
+
+void io_service_impl::stop_notification(detail::process_service_data &data)
+{
+    // reference_wrapper does not implement equality
+    process_watchers_.remove_if([&](auto l){
+        return &l.get() == &data;
+    });
+}
+
+void io_service_impl::ev_process_change(struct ev_loop* loop, struct ev_child* child, int events)
+{
+    auto self = static_cast<io_service_impl*>(ev_userdata(loop));
+    for (auto i : self->process_watchers_)
+    {
+        if (i.get().pid == child->rpid) {
+            i.get().rc = child->rstatus;
+            i.get().notification->work();
+            break;
+        }
+    }
 }
 
 void io_service_impl::ev_notification(struct ev_loop* loop, ev_io* io, int events)
@@ -173,6 +195,24 @@ ssize_t io_service_impl::send(descriptor::native_type fd, const uint8_t* buffer,
 ssize_t io_service_impl::recv(descriptor::native_type fd, uint8_t* buffer, size_t sz, int flags)
 {
     return ::recv(fd, buffer, sz, flags);
+}
+
+expected_size_t io_service_impl::read(descriptor::native_type fd, uint8_t* buffer, size_t sz)
+{
+    ssize_t r = ::read(fd, buffer, sz);
+    if (0 > r) {
+        return { ptl::error_code{ errno } };
+    }
+    return (size_t)r;
+}
+
+expected_size_t io_service_impl::write(descriptor::native_type fd, const uint8_t* buffer, size_t sz)
+{
+    ssize_t r = ::write(fd, buffer, sz);
+    if (0 > r) {
+        return { ptl::error_code{ errno } };
+    }
+    return (size_t)r;
 }
 
 expected_void io_service_impl::shutdown(descriptor::native_type fd, int how)

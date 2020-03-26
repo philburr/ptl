@@ -4,20 +4,21 @@
 #endif
 #include <system_error>
 #include <experimental/coroutine>
+#include "io_service_impl.hpp"
 
 
-namespace ptl::experimental::coroutine::asio::detail {
+namespace ptl::experimental::coroutine::iosvc::detail {
 
 template<typename T>
 using expected = ptl::expected<T, ptl::error_code, ptl::error_policy_assert>;
 
 template <typename DERIVED>
-struct io_operation : public ptl::experimental::coroutine::asio::io_service_operation
+struct io_operation
 {
 private:
     std::experimental::coroutine_handle<> coroutine_ = nullptr;
 
-    void get_return_value()
+    decltype(auto) get_return_value()
     {
         return static_cast<DERIVED*>(this)->get_return();
     }

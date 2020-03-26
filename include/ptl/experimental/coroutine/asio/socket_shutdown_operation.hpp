@@ -1,11 +1,11 @@
 #pragma once
 
 #include "socket.hpp"
-#include "detail/io_operation.hpp"
+#include "ptl/experimental/coroutine/io_service/detail/io_operation.hpp"
 
 namespace ptl::experimental::coroutine::asio {
 
-struct socket_shutdown_operation : public detail::io_operation<socket_shutdown_operation>
+struct socket_shutdown_operation : iosvc::detail::io_operation<socket_shutdown_operation>, iosvc::io_service_operation
 {
     socket_shutdown_operation(socket& s)
         : io_operation<socket_shutdown_operation>()
@@ -13,14 +13,14 @@ struct socket_shutdown_operation : public detail::io_operation<socket_shutdown_o
     {}
 
 private:
-    friend class detail::io_operation<socket_shutdown_operation>;
+    friend class iosvc::detail::io_operation<socket_shutdown_operation>;
     bool begin()
     {
-        auto r = socket_.shutdown(ptl::experimental::coroutine::asio::detail::shutdown_read_write);
+        auto r = socket_.shutdown(iosvc::detail::shutdown_read_write);
         if (r.is_error()) {
             if (r.error().value() == EINPROGRESS) {
                 // we need notification
-                socket_.start_io(ptl::experimental::coroutine::asio::io_kind::write, this);
+                socket_.start_io(iosvc::io_kind::write, this);
                 return false;
             }
             ec_ = r.error();
@@ -32,7 +32,7 @@ private:
 
     void work() override
     {
-        auto r = socket_.shutdown(ptl::experimental::coroutine::asio::detail::shutdown_read_write);
+        auto r = socket_.shutdown(iosvc::detail::shutdown_read_write);
         if (r.is_error()) {
             ec_ = r.error();
         }

@@ -4,26 +4,25 @@
 #include <sys/un.h>
 #include <netinet/in.h>
 
-using namespace ptl::experimental::coroutine::asio;
-using namespace ptl::experimental::coroutine::asio::detail;
+namespace ptl::experimental::coroutine::asio {
 
-std::pair<ptl::experimental::coroutine::asio::socket, ptl::experimental::coroutine::asio::socket> ptl::experimental::coroutine::asio::socket::create_pair(ptl::experimental::coroutine::asio::io_service& service)
+std::pair<asio::socket, asio::socket> socket::create_pair(iosvc::io_service& service)
 {
     auto [s1, s2] = service.impl().create_pair();
     return { socket(service, s1), socket(service, s2) };
 }
-ptl::experimental::coroutine::asio::socket socket::create_tcpv4(ptl::experimental::coroutine::asio::io_service& service)
+asio::socket socket::create_tcpv4(iosvc::io_service& service)
 {
     auto s = service.impl().create_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     return socket(service, s);
 }
-ptl::experimental::coroutine::asio::socket socket::create_tcpv6(ptl::experimental::coroutine::asio::io_service& service)
+asio::socket socket::create_tcpv6(iosvc::io_service& service)
 {
     auto s = service.impl().create_socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
     return socket(service, s);
 }
 
-expected_void socket_internal::bind(const ptl::experimental::coroutine::asio::ip_endpoint& ep)
+iosvc::detail::expected_void socket_internal::bind(const ip_endpoint& ep)
 {
     local_ = ep;
     if (local_.is_ipv4()) {
@@ -51,7 +50,7 @@ expected_void socket_internal::bind(const ptl::experimental::coroutine::asio::ip
     }
 }
 
-expected_void socket_internal::listen()
+iosvc::detail::expected_void socket_internal::listen()
 {
     auto r = service_.listen(native_descriptor(), 0);
     if (r.is_error()) {
@@ -60,7 +59,7 @@ expected_void socket_internal::listen()
     return get_local();
 }
 
-expected_void socket_internal::connect(const ptl::experimental::coroutine::asio::ip_endpoint& ep)
+iosvc::detail::expected_void socket_internal::connect(const ip_endpoint& ep)
 {
     if (ep.is_ipv4()) {
         const auto& ep4 = ep.to_ipv4();
@@ -87,7 +86,7 @@ expected_void socket_internal::connect(const ptl::experimental::coroutine::asio:
     }
 }
 
-expected_socket socket_internal::accept()
+iosvc::detail::expected_socket socket_internal::accept()
 {
     if (local_.is_ipv4()) {
         ::sockaddr_storage storage;
@@ -99,7 +98,7 @@ expected_socket socket_internal::accept()
             return r;
         }
 
-        remote_ = ptl::experimental::coroutine::asio::ipv4_endpoint(ptl::experimental::coroutine::asio::ipv4_address(addr->sin_addr.s_addr), ntohs(addr->sin_port));
+        remote_ = ipv4_endpoint(ipv4_address(addr->sin_addr.s_addr), ntohs(addr->sin_port));
         return r;
     } else {
         ::sockaddr_storage storage;
@@ -111,17 +110,17 @@ expected_socket socket_internal::accept()
             return r;
         }
 
-        remote_ = ptl::experimental::coroutine::asio::ipv6_endpoint(ptl::experimental::coroutine::asio::ipv6_address(addr->sin6_addr.s6_addr), ntohs(addr->sin6_port));
+        remote_ = ipv6_endpoint(ipv6_address(addr->sin6_addr.s6_addr), ntohs(addr->sin6_port));
         return r;
     }
 }
 
-expected_void socket_internal::shutdown(int how)
+iosvc::detail::expected_void socket_internal::shutdown(int how)
 {
     return service_.shutdown(native_descriptor(), how);
 }
 
-expected_void socket_internal::get_local()
+iosvc::detail::expected_void socket_internal::get_local()
 {
     if (local_.is_ipv4()) {
         ::sockaddr_storage storage;
@@ -133,7 +132,7 @@ expected_void socket_internal::get_local()
             return r;
         }
 
-        local_ = ptl::experimental::coroutine::asio::ipv4_endpoint(ptl::experimental::coroutine::asio::ipv4_address(ntohl(addr->sin_addr.s_addr)), ntohs(addr->sin_port));
+        local_ = ipv4_endpoint(ipv4_address(ntohl(addr->sin_addr.s_addr)), ntohs(addr->sin_port));
     } else {
         ::sockaddr_storage storage;
         ::sockaddr_in6* addr = reinterpret_cast<::sockaddr_in6*>(&storage);
@@ -144,12 +143,12 @@ expected_void socket_internal::get_local()
             return r;
         }
 
-        local_ = ptl::experimental::coroutine::asio::ipv6_endpoint(ptl::experimental::coroutine::asio::ipv6_address(addr->sin6_addr.s6_addr), ntohs(addr->sin6_port));
+        local_ = ipv6_endpoint(ipv6_address(addr->sin6_addr.s6_addr), ntohs(addr->sin6_port));
     }
     return {};
 }
 
-expected_void socket_internal::get_remote()
+iosvc::detail::expected_void socket_internal::get_remote()
 {
     if (local_.is_ipv4()) {
         ::sockaddr_storage storage;
@@ -161,7 +160,7 @@ expected_void socket_internal::get_remote()
             return r;
         }
 
-        remote_ = ptl::experimental::coroutine::asio::ipv4_endpoint(ptl::experimental::coroutine::asio::ipv4_address(ntohl(addr->sin_addr.s_addr)), ntohs(addr->sin_port));
+        remote_ = ipv4_endpoint(ipv4_address(ntohl(addr->sin_addr.s_addr)), ntohs(addr->sin_port));
     } else {
         ::sockaddr_storage storage;
         ::sockaddr_in6* addr = reinterpret_cast<::sockaddr_in6*>(&storage);
@@ -172,8 +171,9 @@ expected_void socket_internal::get_remote()
             return r;
         }
 
-        remote_ = ptl::experimental::coroutine::asio::ipv6_endpoint(ptl::experimental::coroutine::asio::ipv6_address(addr->sin6_addr.s6_addr), ntohs(addr->sin6_port));
+        remote_ = ipv6_endpoint(ipv6_address(addr->sin6_addr.s6_addr), ntohs(addr->sin6_port));
     }
     return {};
 }
 
+}

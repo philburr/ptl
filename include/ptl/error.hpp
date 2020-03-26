@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <type_traits>
 #include <exception>
+#include <string>
 #include "source_location.hpp"
 
 namespace ptl

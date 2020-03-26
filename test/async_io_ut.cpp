@@ -23,7 +23,7 @@ using ptl::experimental::coroutine::async_scope;
 
 TEST_CASE("socket pair")
 {
-    ptl::experimental::coroutine::asio::io_service srv;
+    ptl::experimental::coroutine::iosvc::io_service srv;
 
     auto [read_socket, write_socket] = socket::create_pair(srv);
 
@@ -53,6 +53,7 @@ TEST_CASE("socket pair")
 
 TEST_CASE("socket connection")
 {
+    using namespace ptl::experimental::coroutine::iosvc;
     using namespace ptl::experimental::coroutine::asio;
     io_service svc;
 
